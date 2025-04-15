@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Pain on Canvas with Mouse</title>
+        <style>
+            *{  /* '*' stands for universal selector, selects all elements on HTML page */
+                margin: 0; /* 0 means zero :) */
+                padding: 0;
+                box-sizing: border-box; /* include the padding and border in the an element's width and height */
+                font-size: 20px; /* for everyone's enjoyment */
+            }
+            #wrapper{   
+                width: 100vw;   /* 100% of the viewport width */
+                height: 100vh;  /* 100% of the viewport height */
+                display: flex;
+                flex-direction: column; /* main axis is vetical, to split vieport horizontaly between header and canvas-container */
+            }
+            header{
+                width: 100%; /* 100% of 100vw, i.e. the whole viewport width */
+                height: 80px;
+                background-color: silver; /* your choice of color */ 
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+            }
+            #canvas-container{
+                width: 100%; /* 100% of 100vh is whole viewports width */
+                height: calc(100vh - 80px); /* viewport height minus header height */
+                position: relative; /* mouse event propetries offsetX and offsetY are relative to the positioned target (HTML element which fire the event), so for them to work correctly canvas must be positioned */
+                border: 3px solid red;
+            }
+            #my-canvas{
+            }
+        </style>
+    </head>
+    <body>
+        <div id="#wrapper"> <!-- top level div, which "wrapps" everything -->
+            <header> <!-- semantic HTML element, can be <div id="anyUniqueName", I just like semantic element. Holds all control and "display info" elements -->
+                <div>Brush shape:
+                <div>Circle
+                    <input type="radio" id="circle" name="brush-shape-btns" value="circle" checked autocomplete="off">
+                </div>
+                <div>Square
+                    <input type="radio" id="square" name="brush-shape-btns" value="square" autocomplete="off">
+                </div>                
+                </div>
+                <div style="width:250px;" id="brush-info">Brush size: 1px
+                    <input type="range" id="brush-size" min="1" max="50" value="5" autocomplete="off">
+                </div>
+                <input type="color" id="brush-color" autocomplete="off">
+                <div style="min-width:150px;"> <!-- to avoid child divs textContent to change parent width, so slight horizontal shaking will not happen. Delete style attribute, and see what I mean. -->
+                    <!-- its recommended to use lowercase when naming IDs, but this "naming" makes JS code simpler, and I can't resist -->
+                    <div id="clientX"></div> 
+                    <div id="clientY"></div>
+                </div>
+                <div style="min-width:150px;">
+                    <div id="offsetX"></div>
+                    <div id="offsetY"></div>
+                </div>
+            </header>
+            <div id="canvas-container">
+                <canvas id="my-canvas"></canvas> <!-- canvas nested inside another div, to set canvas (lines 116 and 117) using its parent size. -->
+            </div>
+        </div>
+        <script>
+//*************************** global variables **********************
+const headerElem = document.querySelector("header");
+const canvasElem = document.querySelector("#my-canvas");
+const brushInfoElem = document.querySelector("#brush-info");
+const ctx = canvasElem.getContext('2d'); /* creates 2D context object, to get access to all drowing methods like fillRext(), beginPath() etc. */
+//*************************** events ********************************
+headerElem.addEventListener("input",e=>{ /* events from all input elements bubble up to parent headerElem */
+    updateBrush(e);
+});
+document.addEventListener("mousemove",e=>{
+    ["clientX","clientY","offsetX","offsetY"].forEach(str=>{ // display mousemove event properties with respective names inside divs with respective IDs.
+        document.querySelector(`#${str}`).textContent = str+": "+e[str];
+    });
+    paint(e);
+});
+document.addEventListener("click",e=>{
+    paint(e);
+});
+//*************************** logic *********************************
+function updateBrush(e){ 
+    e.target.id === "brush-size" && (brushInfoElem.childNodes[0].nodeValue = `Brush size: ${e.target.value}px`); // if event was fired by slider, update textNode with respective value.
+}
+function paint(e){ // This is where everything happens.
+    if((e.buttons !== 1 && e.type === "mousemove") || e.target.id !== "my-canvas") return; // a bit complicated, because "click" event always have e.buttons = 0.
+    const brushColor = document.querySelector("#brush-color").value;
+    const brushSize = parseInt(brushInfoElem.childNodes[0].nodeValue.replace(/[^\d]+/,'')); // What's all the fuss about. The purpose is not to declare global variable for brushSize, and extract in from text node. Alternative way, is to declare brushSize as global variable, and assing its value in updateBrush() function.
+    let brushShape; // declare a function scope variables.
+    ["circle","square"].forEach(str=>{ // scan radio buttons and set brushShape variable to the id of the checked one.
+        document.querySelector(`#${str}`).checked && (brushShape = str);
+    });
+    brushShape = brushSize < 2 ? "square" : brushShape; // ternary operator. if brushSize < 2, brushShape will be "square".
+    switch(brushShape){
+        case "circle":
+            ctx.fillStyle = brushColor;
+            ctx.beginPath();
+            ctx.arc(e.offsetX,e.offsetY,brushSize/2,0,Math.PI*2);
+            ctx.fill();
+            break;
+        case "square":
+            ctx.fillStyle = brushColor;
+            ctx.beginPath();
+            ctx.rect(e.offsetX-brushSize/2,e.offsetY-brushSize/2,brushSize,brushSize);
+            ctx.fill();
+            break;
+    }
+}
+//*************************** start here ******************
+onload = ()=>{
+// set canvas width and height equal to parents widht and height.
+canvasElem.width = document.querySelector("#canvas-container").getBoundingClientRect.width;
+canvasElem.height = document.querySelector("#canvas-container").getBoundingClientRect.height;
+// envoke updateBrush function emulating input slider event with object literal. updateBrush will store 5 in the displayed text 'Brush size: 5px'.
+updateBrush({target:{id:"brush-size", value:5}}); 
+}
+//*********************************************************
+        </script>
+    </body>
+</html>
